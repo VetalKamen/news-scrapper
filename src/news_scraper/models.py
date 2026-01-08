@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 from typing import Optional
 from typing import List
 
-from pydantic import BaseModel, Field, HttpUrl
+from pydantic import BaseModel, Field, HttpUrl, field_validator
 
 
 def utc_now_iso() -> str:
@@ -44,3 +44,51 @@ class ArticleAI(ArticleRaw):
 
     # Optional: keep the prompt/model metadata for auditability
     llm_model: Optional[str] = None
+
+
+class VectorDocument(BaseModel):
+    """
+    Single document stored in the vector database.
+    """
+
+    id: str = Field(..., description="Stable unique ID (usually URL)")
+    text: str = Field(..., description="Text used for embedding")
+    metadata: dict = Field(default_factory=dict)
+
+
+class LLMArticleAnalysis(BaseModel):
+    """
+    Strict schema for LLM output.
+    The LLM MUST return JSON that conforms to this model.
+    """
+
+    summary: str = Field(
+        ...,
+        description="Concise summary of the article in 3–5 sentences."
+    )
+
+    topics: List[str] = Field(
+        ...,
+        description="3–7 short topic tags, lowercase, no duplicates."
+    )
+
+    @field_validator("summary")
+    @classmethod
+    def summary_not_empty(cls, v: str) -> str:
+        if not v.strip():
+            raise ValueError("summary must not be empty")
+        return v.strip()
+
+    @field_validator("topics")
+    @classmethod
+    def validate_topics(cls, v: List[str]) -> List[str]:
+        cleaned = []
+        for t in v:
+            t = t.strip().lower()
+            if t and t not in cleaned:
+                cleaned.append(t)
+
+        if not (3 <= len(cleaned) <= 7):
+            raise ValueError("topics must contain between 3 and 7 items")
+
+        return cleaned

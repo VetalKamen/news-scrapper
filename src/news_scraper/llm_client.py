@@ -1,16 +1,28 @@
 from __future__ import annotations
 
 import logging
-from typing import Optional
-
+import json
 from openai import OpenAI
 from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
 
 from news_scraper.config import settings
-from news_scraper.llm_parser import parse_llm_output
 from news_scraper.prompts import SYSTEM_PROMPT
+from news_scraper.models import LLMArticleAnalysis
 
 log = logging.getLogger("news_scraper.llm")
+
+
+def parse_llm_output(raw_text: str) -> LLMArticleAnalysis:
+    """
+    Parse and validate raw LLM output.
+    Raises ValueError if JSON or schema is invalid.
+    """
+    try:
+        data = json.loads(raw_text)
+    except json.JSONDecodeError as e:
+        raise ValueError(f"Invalid JSON from LLM: {e}") from e
+
+    return LLMArticleAnalysis.model_validate(data)
 
 
 class LLMClient:
