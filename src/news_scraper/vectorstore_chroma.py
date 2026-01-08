@@ -2,15 +2,68 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
-from typing import Iterable, List, Optional, Set
+from typing import List, Optional, Set
 
 import chromadb
 from chromadb.api.models.Collection import Collection
 
 from news_scraper.config import settings
-from news_scraper.vector_models import VectorDocument
+from news_scraper.models import VectorDocument
+from news_scraper.models import ArticleAI
 
 log = logging.getLogger("news_scraper.vectorstore")
+
+
+def _build_embedding_text(article: ArticleAI) -> str:
+    """
+    Build the text that will be embedded for semantic search.
+    """
+    parts = []
+
+    if article.title:
+        parts.append(article.title.strip())
+
+    if article.summary:
+        parts.append(article.summary.strip())
+
+    if article.topics:
+        parts.append("Topics: " + ", ".join(article.topics))
+
+    return "\n\n".join(parts)
+
+
+def _normalize_metadata(metadata: dict) -> dict:
+    out = {}
+    for k, v in metadata.items():
+        if isinstance(v, list):
+            out[k] = ", ".join(map(str, v))
+        elif isinstance(v, (str, int, float, bool)) or v is None:
+            out[k] = v
+        else:
+            out[k] = str(v)
+    return out
+
+
+def article_to_vector_doc(article: ArticleAI) -> VectorDocument:
+    """
+    Convert AI-enriched article to a vector-store document.
+    Chroma metadata must be scalar values only (no lists/dicts).
+    """
+    topics_str = ", ".join(article.topics) if article.topics else ""
+
+    return VectorDocument(
+        id=str(article.url),
+        text=_build_embedding_text(article),
+        metadata={
+            "url": str(article.url),
+            "title": article.title or "",
+            "source": article.source or "",
+            "summary": (article.summary or "")[:2000],
+            # Store topics as a single string for Chroma compatibility
+            "topics": topics_str,
+            "topic_count": len(article.topics) if article.topics else 0,
+        },
+    )
 
 
 class ChromaVectorStore:
@@ -46,7 +99,7 @@ class ChromaVectorStore:
         self._collection.add(
             ids=[d.id for d in docs],
             documents=[d.text for d in docs],
-            metadatas=[d.metadata for d in docs],
+            metadatas=[_normalize_metadata(d.metadata) for d in docs],
             embeddings=embeddings,
         )
         log.info("Added %d documents to Chroma", len(docs))

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import List, Dict, Iterable, Iterator, Any
+from typing import List, Dict, Iterator, Any
 
 
 def append_jsonl(path: Path, obj: Dict[str, Any]) -> None:
@@ -14,6 +14,7 @@ def append_jsonl(path: Path, obj: Dict[str, Any]) -> None:
     with path.open("a", encoding="utf-8") as f:
         f.write(line + "\n")
         f.flush()
+
 
 def iter_jsonl(path: Path) -> Iterator[Dict[str, Any]]:
     """
@@ -29,6 +30,7 @@ def iter_jsonl(path: Path) -> Iterator[Dict[str, Any]]:
             if not line:
                 continue
             yield json.loads(line)
+
 
 def read_urls_from_file(path: Path) -> List[str]:
     """
@@ -53,4 +55,3 @@ def read_urls_from_file(path: Path) -> List[str]:
             urls.append(line)
 
     return urls
-

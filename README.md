@@ -206,15 +206,20 @@ All commands are executed as:
 ### Project Structure
 ```text
 src/news_scraper/
-├── cli.py                 # CLI entry point
-├── config.py              # Environment-based configuration
-├── scrape.py              # Scraping pipeline
-├── analyze.py             # GenAI analysis pipeline
-├── index.py               # Vector indexing
-├── search.py              # Semantic search
-├── llm_client.py          # OpenAI LLM wrapper
-├── embeddings_client.py   # OpenAI embeddings wrapper
-├── vectorstore_chroma.py  # ChromaDB integration
-├── models.py              # Pydantic data models
-├── prompts.py             # LLM prompt templates
+├── __init__.py             # Package marker (allows imports from news_scraper)
+├── __main__.py             # Module entrypoint: enables `python -m news_scraper`
+├── cli.py                  # Typer CLI wiring (commands: health/scrape/analyze/index/search/version)
+├── config.py               # Settings management (env vars, defaults, paths)
+├── logging_utils.py        # Central logging setup (format, levels, handlers)
+├── models.py               # Pydantic domain models (ArticleRaw/ArticleAI, LLM output schema, VectorDocument, etc.)
+├── io.py                   # JSONL + filesystem helpers (read/write, safe dirs, iterators)
+├── http_client.py          # HTTP fetching layer (httpx client, headers/UA, timeouts)
+├── scrape.py               # Scrape pipeline orchestration (reads URLs, fetches, extracts, writes raw JSONL)
+├── analyze.py              # GenAI analysis pipeline (loads raw, calls LLM, validates, writes AI JSONL)
+├── llm_client.py           # OpenAI chat wrapper (request/response, structured output parsing/validation)
+├── prompts.py              # Prompt templates + system/user instructions used by the LLM
+├── embeddings_client.py    # OpenAI embeddings wrapper (batching, model selection, error handling)
+├── vectorstore_chroma.py   # Chroma persistent store wrapper (add/query, metadata normalization, mapping helpers)
+├── index.py                # Vector indexing pipeline (AI JSONL → embeddings → Chroma)
+└── search.py               # Semantic search pipeline/CLI logic (query → embed → Chroma query → pretty output)
 ```

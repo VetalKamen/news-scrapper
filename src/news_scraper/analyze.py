@@ -2,16 +2,32 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
-from typing import Optional, Set
+from typing import Optional, Set, Iterator
 
-from news_scraper.analyze_io import iter_ok_articles
 from news_scraper.io import append_jsonl
 from news_scraper.io import iter_jsonl
 from news_scraper.llm_client import LLMClient
-from news_scraper.models import ArticleAI
+from news_scraper.models import ArticleAI, ArticleRaw
 from news_scraper.prompts import build_article_analysis_prompt
 
 log = logging.getLogger("news_scraper.analyze")
+
+
+def iter_ok_articles(raw_jsonl: Path) -> Iterator[ArticleRaw]:
+    """
+    Yield ArticleRaw entries that are eligible for LLM analysis:
+    - status == 'ok'
+    - non-empty text
+    """
+    for obj in iter_jsonl(raw_jsonl):
+        art = ArticleRaw.model_validate(obj)
+
+        if art.status != "ok":
+            continue
+        if not art.text or not art.text.strip():
+            continue
+
+        yield art
 
 
 def _load_processed_urls(out_file: Path) -> Set[str]:
@@ -30,9 +46,9 @@ def _load_processed_urls(out_file: Path) -> Set[str]:
 
 
 def analyze_raw_to_ai_jsonl(
-    raw_file: Path,
-    out_file: Path,
-    limit: Optional[int] = None,
+        raw_file: Path,
+        out_file: Path,
+        limit: Optional[int] = None,
 ) -> dict:
     """
     Read raw JSONL, analyze eligible articles with LLM, write AI-enriched JSONL.
