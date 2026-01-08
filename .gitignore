@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+dist/
+build/
+
+# Virtual env
+.venv/
+venv/
+
+# Local config / secrets
+.env
+
+# Data artifacts (keep samples, ignore generated)
+data/raw/*.jsonl
+data/processed/*.jsonl
+data/vectorstore/
+
+# IDE
+.idea/
+.vscode/
