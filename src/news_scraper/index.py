@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Optional, Set
 
 from news_scraper.embeddings_client import EmbeddingsClient
-from news_scraper.jsonl_reader import iter_jsonl
+from news_scraper.io import iter_jsonl
 from news_scraper.models import ArticleAI
 from news_scraper.vector_io import article_to_vector_doc
 from news_scraper.vectorstore_chroma import ChromaVectorStore

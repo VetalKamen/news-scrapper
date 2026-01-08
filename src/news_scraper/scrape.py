@@ -9,9 +9,9 @@ import httpx
 
 from news_scraper.extract import extract_article
 from news_scraper.http_client import HttpFetcher
-from news_scraper.jsonl import append_jsonl
+from news_scraper.io import append_jsonl
 from news_scraper.models import ArticleRaw
-from news_scraper.utils_io import read_urls_from_file
+from news_scraper.io import read_urls_from_file
 
 log = logging.getLogger("news_scraper.scrape")
 

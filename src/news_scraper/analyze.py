@@ -5,8 +5,8 @@ from pathlib import Path
 from typing import Optional, Set
 
 from news_scraper.analyze_io import iter_ok_articles
-from news_scraper.jsonl import append_jsonl
-from news_scraper.jsonl_reader import iter_jsonl
+from news_scraper.io import append_jsonl
+from news_scraper.io import iter_jsonl
 from news_scraper.llm_client import LLMClient
 from news_scraper.models import ArticleAI
 from news_scraper.prompts import build_article_analysis_prompt

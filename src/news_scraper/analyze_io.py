@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Iterator
 
-from news_scraper.jsonl_reader import iter_jsonl
+from news_scraper.io import iter_jsonl
 from news_scraper.models import ArticleRaw
 
 
