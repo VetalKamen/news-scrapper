@@ -87,9 +87,11 @@ This project handles such failures gracefully but they will not produce usable c
 
 Command:
 
-`PYTHONPATH=src python -m news_scraper scrape \
+```text
+ PYTHONPATH=src python -m news_scraper scrape \
   --urls-file urls.sample.txt \
-  --min-chars 300`
+  --min-chars 300
+ ```
 
 Input:
 
@@ -121,7 +123,9 @@ Example (success):
 
 Command:
 
-`PYTHONPATH=src python -m news_scraper analyze`
+```text
+PYTHONPATH=src python -m news_scraper analyze
+```
 
 Input:
 
@@ -153,7 +157,9 @@ Example:
 
 Command:
 
-`PYTHONPATH=src python -m news_scraper index`
+```text
+PYTHONPATH=src python -m news_scraper index
+```
 
 Input:
 
@@ -170,12 +176,14 @@ Notes:
 
 ### Step 4 — Semantic Search
 **Purpose**
-Search articles using natural language
-Retrieve results by semantic similarity (not keywords)
+* Search articles using natural language
+* Retrieve results by semantic similarity (not keywords)
 
 Command:
 
-`PYTHONPATH=src python -m news_scraper search "corruption investigation real estate"`
+```text
+PYTHONPATH=src python -m news_scraper search "corruption investigation real estate"
+```
 
 Example output:
 
@@ -190,14 +198,62 @@ You can use synonyms and paraphrases:
 
 `PYTHONPATH=src python -m news_scraper search "financial crime and bribery"`
 
+### Extra Step — Single Article Ingestion
+**Purpose**
+* Ingest a single article URL into the system end-to-end (without manually editing URL files):
+* Scrape the article (raw JSONL)
+* Analyze it with GenAI (summary + topics → AI JSONL)
+* Index it into the vector DB (Chroma)
+
+Command:
+
+```text
+PYTHONPATH=src python -m news_scraper ingest "<article_url>" --min-chars 300
+```
+
+_What it does / Outputs_: 
+
+Appends (if not already present) to:
+
+`data/raw/articles_raw.jsonl`
+   
+`data/processed/articles_ai.jsonl`
+
+_Indexes into:_
+
+`data/vectorstore/ (Chroma persistent directory)`
+
+**Notes:**
+**No duplicates policy:**
+* If the URL already exists in AI JSONL (normalized), ingest skips GenAI + indexing (already ingested).
+* If the URL already exists in Chroma, indexing is skipped.
+* Raw scraping is also idempotent (already-scraped URLs are skipped).
+
+Example output:
+
+```text
+Ingest finished:
+status=ok
+url=https://www.bbc.com/news/articles/c8d09qd6zn2o
+scrape: { total: 1, ok: 1, failed: 0, skipped_existing: 0 }
+analyze: { processed: 1, failed: 0 }
+index: { added: 1, skipped_existing: 0 }
+```
+
+Verify it was added (search after ingest):
+```text
+PYTHONPATH=src python -m news_scraper search "keyword1 keyword2 keyword3"
+```
+
 ### CLI Command Summary
-| Command   | Description                                  |
-| --------- | -------------------------------------------- |
-| `health`  | Verify configuration and logging             |
-| `scrape`  | Fetch and extract raw articles               |
-| `analyze` | Generate summaries and topics using GenAI    |
-| `index`   | Create embeddings and store them in ChromaDB |
-| `search`  | Perform semantic search                      |
+| Command   | Description                                      |
+| --------- |--------------------------------------------------|
+| `health`  | Verify configuration and logging                 |
+| `scrape`  | Fetch and extract raw articles                   |
+| `analyze` | Generate summaries and topics using GenAI        |
+| `index`   | Create embeddings and store them in ChromaDB     |
+| `search`  | Perform semantic search                          |
+| `ingest`  | Runs pipeline on an article provided by the user |
 
 All commands are executed as:
 
@@ -206,20 +262,16 @@ All commands are executed as:
 ### Project Structure
 ```text
 src/news_scraper/
-├── __init__.py             # Package marker (allows imports from news_scraper)
-├── __main__.py             # Module entrypoint: enables `python -m news_scraper`
-├── cli.py                  # Typer CLI wiring (commands: health/scrape/analyze/index/search/version)
-├── config.py               # Settings management (env vars, defaults, paths)
-├── logging_utils.py        # Central logging setup (format, levels, handlers)
-├── models.py               # Pydantic domain models (ArticleRaw/ArticleAI, LLM output schema, VectorDocument, etc.)
-├── io.py                   # JSONL + filesystem helpers (read/write, safe dirs, iterators)
-├── http_client.py          # HTTP fetching layer (httpx client, headers/UA, timeouts)
-├── scrape.py               # Scrape pipeline orchestration (reads URLs, fetches, extracts, writes raw JSONL)
-├── analyze.py              # GenAI analysis pipeline (loads raw, calls LLM, validates, writes AI JSONL)
-├── llm_client.py           # OpenAI chat wrapper (request/response, structured output parsing/validation)
-├── prompts.py              # Prompt templates + system/user instructions used by the LLM
-├── embeddings_client.py    # OpenAI embeddings wrapper (batching, model selection, error handling)
-├── vectorstore_chroma.py   # Chroma persistent store wrapper (add/query, metadata normalization, mapping helpers)
-├── index.py                # Vector indexing pipeline (AI JSONL → embeddings → Chroma)
-└── search.py               # Semantic search pipeline/CLI logic (query → embed → Chroma query → pretty output)
+├── cli.py                 # CLI entry point
+├── config.py              # Environment-based configuration
+├── scrape.py              # Scraping pipeline
+├── analyze.py             # GenAI analysis pipeline
+├── index.py               # Vector indexing
+├── search.py              # Semantic search
+├── llm_client.py          # OpenAI LLM wrapper
+├── embeddings_client.py   # OpenAI embeddings wrapper
+├── vectorstore_chroma.py  # ChromaDB integration
+├── models.py              # Pydantic data models
+├── prompts.py             # LLM prompt templates
+├── ingest.py              # Single article handler
 ```

@@ -1,8 +1,59 @@
 from __future__ import annotations
+from __future__ import annotations
 
 import json
+from typing import List
+
 from pathlib import Path
-from typing import List, Dict, Iterator, Any
+from typing import Iterator, Any, Dict, Set
+from urllib.parse import urlsplit, urlunsplit
+
+
+def normalize_url(url: str) -> str:
+    """
+    Normalize URL to avoid trivial duplicates:
+    - trim whitespace
+    - drop fragment (#...)
+    - remove trailing slash for non-root paths
+    """
+    url = url.strip()
+    parts = urlsplit(url)
+    parts = parts._replace(fragment="")
+    normalized = urlunsplit(parts)
+    if normalized.endswith("/") and parts.path not in ("", "/"):
+        normalized = normalized[:-1]
+    return normalized
+
+
+def load_seen_urls(jsonl_path: Path) -> Set[str]:
+    """
+    Return set of normalized URLs present in a JSONL file (if it exists).
+    Expects objects to have a 'url' field.
+    """
+    if not jsonl_path.exists():
+        return set()
+
+    seen: Set[str] = set()
+    for obj in iter_jsonl(jsonl_path):
+        u = obj.get("url")
+        if not u:
+            continue
+        seen.add(normalize_url(str(u)))
+    return seen
+
+
+def contains_url(jsonl_path: Path, url: str) -> bool:
+    """
+    Fast(ish) membership check for normalized URL in JSONL file.
+    """
+    target = normalize_url(url)
+    if not jsonl_path.exists():
+        return False
+    for obj in iter_jsonl(jsonl_path):
+        u = obj.get("url")
+        if u and normalize_url(str(u)) == target:
+            return True
+    return False
 
 
 def append_jsonl(path: Path, obj: Dict[str, Any]) -> None:

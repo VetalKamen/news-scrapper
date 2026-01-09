@@ -12,6 +12,7 @@ from news_scraper.scrape import scrape_urls_to_jsonl
 from news_scraper.analyze import analyze_raw_to_ai_jsonl
 from news_scraper.index import index_ai_jsonl_to_chroma
 from news_scraper.search import semantic_search
+from news_scraper.ingest import ingest_url
 
 
 app = typer.Typer(add_completion=False, help="News Scraper prototype CLI")
@@ -145,3 +146,31 @@ def search(
         typer.echo()
         typer.echo(r["document"][:500] + ("..." if len(r["document"]) > 500 else ""))
 
+
+@app.command()
+def ingest(
+    url: str = typer.Argument(..., help="Direct article URL to ingest (scrape -> analyze -> index)"),
+    min_chars: int = typer.Option(300, "--min-chars", help="Minimum extracted characters to accept an article"),
+    sleep_s: float = typer.Option(0.0, "--sleep-s", help="Sleep between requests (seconds)"),
+) -> None:
+    """
+    Ingest a single URL end-to-end: scrape -> analyze -> index.
+    """
+    res = ingest_url(url, min_chars=min_chars, scrape_sleep_s=sleep_s)
+
+    if res.get("skipped"):
+        typer.secho("SKIPPED", fg=typer.colors.YELLOW)
+        typer.echo(f"URL: {res.get('url')}")
+        typer.echo(f"Reason: {res.get('reason')}")
+        raise typer.Exit(code=0)
+
+    if res["status"] != "ok":
+        typer.secho(f"FAILED stage={res['stage']} url={res['url']}", fg=typer.colors.RED)
+        typer.echo(str(res.get("detail", "")))
+        raise typer.Exit(code=1)
+
+    typer.secho("OK", fg=typer.colors.GREEN)
+    typer.echo(f"URL: {res['url']}")
+    typer.echo(f"Scrape: {res['scrape']}")
+    typer.echo(f"Analyze: {res['analyze']}")
+    typer.echo(f"Index: {res['index']}")
